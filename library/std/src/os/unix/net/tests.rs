@@ -23,6 +23,7 @@ macro_rules! or_panic {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn basic() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -93,6 +94,7 @@ fn pair() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn try_clone() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -119,6 +121,7 @@ fn try_clone() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn iter() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -167,6 +170,7 @@ fn long_path() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn timeouts() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -194,6 +198,7 @@ fn timeouts() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_read_timeout() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -213,6 +218,7 @@ fn test_read_timeout() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_read_with_timeout() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -240,6 +246,7 @@ fn test_read_with_timeout() {
 // Ensure the `set_read_timeout` and `set_write_timeout` calls return errors
 // when passed zero Durations
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_stream_timeout_zero_duration() {
     let dir = tmpdir();
     let socket_path = dir.path().join("sock");
@@ -259,6 +266,7 @@ fn test_unix_stream_timeout_zero_duration() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");
@@ -275,6 +283,7 @@ fn test_unix_datagram() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unnamed_unix_datagram() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");
@@ -292,6 +301,7 @@ fn test_unnamed_unix_datagram() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram_connect_to_recv_addr() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");
@@ -316,6 +326,7 @@ fn test_unix_datagram_connect_to_recv_addr() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_connect_unix_datagram() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");
@@ -342,6 +353,7 @@ fn test_connect_unix_datagram() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram_recv() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");
@@ -384,6 +396,7 @@ fn datagram_pair() {
 // Ensure the `set_read_timeout` and `set_write_timeout` calls return errors
 // when passed zero Durations
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram_timeout_zero_duration() {
     let dir = tmpdir();
     let path = dir.path().join("sock");
@@ -528,6 +541,7 @@ fn test_abstract_no_pathname_and_not_unnamed() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_stream_peek() {
     let (txdone, rxdone) = crate::sync::mpsc::channel();
 
@@ -560,6 +574,7 @@ fn test_unix_stream_peek() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram_peek() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock");
@@ -584,6 +599,7 @@ fn test_unix_datagram_peek() {
 }
 
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_unix_datagram_peek_from() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock");
@@ -647,6 +663,7 @@ fn test_send_vectored_fds_unix_stream() {
 
 #[cfg(any(target_os = "android", target_os = "linux",))]
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_send_vectored_with_ancillary_to_unix_datagram() {
     fn getpid() -> libc::pid_t {
         unsafe { libc::getpid() }
@@ -714,6 +731,7 @@ fn test_send_vectored_with_ancillary_to_unix_datagram() {
 
 #[cfg(any(target_os = "android", target_os = "linux"))]
 #[test]
+#[cfg_attr(target_os = "android", ignore)] // Android SELinux rules prevent creating Unix sockets
 fn test_send_vectored_with_ancillary_unix_datagram() {
     let dir = tmpdir();
     let path1 = dir.path().join("sock1");

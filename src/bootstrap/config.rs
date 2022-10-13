@@ -15,7 +15,6 @@ use std::str::FromStr;
 
 use crate::builder::TaskPath;
 use crate::cache::{Interned, INTERNER};
-use crate::cc_detect::{ndk_compiler, Language};
 use crate::channel::{self, GitInfo};
 pub use crate::flags::Subcommand;
 use crate::flags::{Color, Flags};
@@ -84,6 +83,7 @@ pub struct Config {
     pub color: Color,
     pub patch_binaries_for_nix: bool,
     pub stage0_metadata: Stage0Metadata,
+    pub android_ndk: Option<PathBuf>,
 
     pub on_fail: Option<String>,
     pub stage: u32,
@@ -436,7 +436,6 @@ pub struct Target {
     pub ranlib: Option<PathBuf>,
     pub default_linker: Option<PathBuf>,
     pub linker: Option<PathBuf>,
-    pub ndk: Option<PathBuf>,
     pub sanitizers: Option<bool>,
     pub profiler: Option<bool>,
     pub crt_static: Option<bool>,
@@ -636,6 +635,7 @@ define_config! {
         bench_stage: Option<u32> = "bench-stage",
         patch_binaries_for_nix: Option<bool> = "patch-binaries-for-nix",
         metrics: Option<bool> = "metrics",
+        android_ndk: Option<PathBuf> = "android-ndk",
     }
 }
 
@@ -777,7 +777,6 @@ define_config! {
         llvm_has_rust_patches: Option<bool> = "llvm-has-rust-patches",
         llvm_filecheck: Option<String> = "llvm-filecheck",
         llvm_libunwind: Option<String> = "llvm-libunwind",
-        android_ndk: Option<String> = "android-ndk",
         sanitizers: Option<bool> = "sanitizers",
         profiler: Option<bool> = "profiler",
         crt_static: Option<bool> = "crt-static",
@@ -863,11 +862,13 @@ impl Config {
         // We still support running outside the repository if we find we aren't in a git directory.
         cmd.arg("rev-parse").arg("--show-toplevel");
         // Discard stderr because we expect this to fail when building from a tarball.
-        let output = cmd
-            .stderr(std::process::Stdio::null())
-            .output()
-            .ok()
-            .and_then(|output| if output.status.success() { Some(output) } else { None });
+        let output = cmd.stderr(std::process::Stdio::null()).output().ok().and_then(|output| {
+            if output.status.success() {
+                Some(output)
+            } else {
+                None
+            }
+        });
         if let Some(output) = output {
             let git_root = String::from_utf8(output.stdout).unwrap();
             // We need to canonicalize this path to make sure it uses backslashes instead of forward slashes.
@@ -1008,6 +1009,7 @@ impl Config {
         config.python = build.python.map(PathBuf::from);
         config.reuse = build.reuse.map(PathBuf::from);
         config.submodules = build.submodules;
+        config.android_ndk = build.android_ndk;
         set(&mut config.low_priority, build.low_priority);
         set(&mut config.compiler_docs, build.compiler_docs);
         set(&mut config.docs_minification, build.docs_minification);
@@ -1235,18 +1237,11 @@ impl Config {
                     .llvm_libunwind
                     .as_ref()
                     .map(|v| v.parse().expect("failed to parse rust.llvm-libunwind"));
-                if let Some(ref s) = cfg.android_ndk {
-                    target.ndk = Some(config.src.join(s));
-                }
                 if let Some(s) = cfg.no_std {
                     target.no_std = s;
                 }
-                target.cc = cfg.cc.map(PathBuf::from).or_else(|| {
-                    target.ndk.as_ref().map(|ndk| ndk_compiler(Language::C, &triple, ndk))
-                });
-                target.cxx = cfg.cxx.map(PathBuf::from).or_else(|| {
-                    target.ndk.as_ref().map(|ndk| ndk_compiler(Language::CPlusPlus, &triple, ndk))
-                });
+                target.cc = cfg.cc.map(PathBuf::from);
+                target.cxx = cfg.cxx.map(PathBuf::from);
                 target.ar = cfg.ar.map(PathBuf::from);
                 target.ranlib = cfg.ranlib.map(PathBuf::from);
                 target.linker = cfg.linker.map(PathBuf::from);

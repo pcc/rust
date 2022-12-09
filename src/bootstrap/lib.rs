@@ -602,6 +602,10 @@ impl Build {
             return;
         }
 
+        if relative_path == Path::new("src/llvm-project") {
+            return;
+        }
+
         let absolute_path = self.config.src.join(relative_path);
 
         // NOTE: The check for the empty directory is here because when running x.py the first time,

@@ -76,6 +76,7 @@ enum LLVMRustAttribute {
   OptimizeNone = 24,
   ReturnsTwice = 25,
   ReadNone = 26,
+  InaccessibleMemOnly = 27,
   SanitizeHWAddress = 28,
   WillReturn = 29,
   StackProtectReq = 30,

@@ -1,6 +1,6 @@
 use crate::attributes;
 use crate::back::write::to_llvm_code_model;
-use crate::callee::get_fn;
+use crate::callee::{get_fn, maybe_sign_fn_ptr};
 use crate::coverageinfo;
 use crate::debuginfo;
 use crate::errors::BranchProtectionRequiresAArch64;
@@ -17,6 +17,7 @@ use rustc_data_structures::fx::FxHashMap;
 use rustc_data_structures::small_c_str::SmallCStr;
 use rustc_hir::def_id::DefId;
 use rustc_middle::mir::mono::CodegenUnit;
+use rustc_middle::ty::layout::FnAbiOf;
 use rustc_middle::ty::layout::{
     FnAbiError, FnAbiOfHelpers, FnAbiRequest, HasParamEnv, LayoutError, LayoutOfHelpers,
     TyAndLayout,
@@ -330,6 +331,15 @@ pub unsafe fn create_module<'ll>(
         );
     }
 
+    if sess.opts.cg.ptrauth_calls {
+        llvm::LLVMRustAddModuleFlag(
+            llmod,
+            llvm::LLVMModFlagBehavior::Min,
+            "ptrauth-calls\0".as_ptr().cast(),
+            1,
+        );
+    }
+
     llmod
 }
 
@@ -486,7 +496,13 @@ impl<'ll, 'tcx> MiscMethods<'tcx> for CodegenCx<'ll, 'tcx> {
     }
 
     fn get_fn_addr(&self, instance: Instance<'tcx>) -> &'ll Value {
-        get_fn(self, instance)
+        let llfn = get_fn(self, instance);
+        maybe_sign_fn_ptr(
+            self,
+            llfn,
+            self.tcx.symbol_name(instance).name,
+            self.fn_abi_of_instance(instance, ty::List::empty()),
+        )
     }
 
     fn eh_personality(&self) -> &'ll Value {
@@ -515,7 +531,7 @@ impl<'ll, 'tcx> MiscMethods<'tcx> for CodegenCx<'ll, 'tcx> {
         }
         let tcx = self.tcx;
         let llfn = match tcx.lang_items().eh_personality() {
-            Some(def_id) if !wants_msvc_seh(self.sess()) => self.get_fn_addr(
+            Some(def_id) if !wants_msvc_seh(self.sess()) => self.get_fn(
                 ty::Instance::resolve(
                     tcx,
                     ty::ParamEnv::reveal_all(),

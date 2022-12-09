@@ -11,6 +11,8 @@ use rustc_target::abi::call::{
 };
 use rustc_target::abi::*;
 use rustc_target::spec::abi::Abi as SpecAbi;
+use siphasher::sip::SipHasher24;
+use std::hash::Hasher;
 
 use std::iter;
 
@@ -384,10 +386,28 @@ fn fn_abi_new_uncached<'tcx>(
         fixed_count: inputs.len() as u32,
         conv,
         can_unwind: fn_can_unwind(cx.tcx(), fn_def_id, sig.abi),
+        pauth_signature: None,
     };
     fn_abi_adjust_for_abi(cx, &mut fn_abi, sig.abi, fn_def_id)?;
     debug!("fn_abi_new_uncached = {:?}", fn_abi);
     Ok(cx.tcx.arena.alloc(fn_abi))
+}
+
+fn encode_type_for_interop<'tcx>(s: &mut String, ty: TyAndLayout<'tcx>) {
+    let mut encode_sized_type = |c: char| {
+        s.push(c);
+        s.push_str(ty.layout.size().bytes().to_string().as_str());
+    };
+
+    match ty.ty.kind() {
+        ty::Bool | ty::Char | ty::Uint(..) | ty::Int(..) => encode_sized_type('I'),
+        ty::Adt(def, ..) if def.is_enum() && def.is_payloadfree() => encode_sized_type('I'),
+        ty::Float(..) => encode_sized_type('F'),
+        ty::RawPtr(..) | ty::Ref(..) | ty::FnPtr(..) => s.push('P'),
+        ty::Tuple(ref tys) if tys.is_empty() => s.push('v'),
+        //_ => panic!("unsupported type {}", ty.ty),
+        _ => s.push('?'),
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(cx))]
@@ -491,6 +511,22 @@ fn fn_abi_adjust_for_abi<'tcx>(
         }
     } else {
         fn_abi.adjust_for_foreign_abi(cx, abi)?;
+        if cx.tcx.sess.opts.cg.ptrauth_calls {
+            let mut encoding = String::new();
+            encode_type_for_interop(&mut encoding, fn_abi.ret.layout);
+            for arg in fn_abi.args.iter().take(fn_abi.fixed_count.try_into().unwrap()) {
+                encode_type_for_interop(&mut encoding, arg.layout);
+            }
+            if fn_abi.c_variadic {
+                encoding.push('z');
+            }
+            let mut hasher = SipHasher24::new_with_key(&[
+                0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10, 0x4a, 0x79, 0x6f, 0xec, 0x8b, 0x1b, 0x42, 0x87,
+                0x81, 0xd4,
+            ]);
+            hasher.write(encoding.as_bytes());
+            fn_abi.pauth_signature = Some(((hasher.finish() % 0xFFFF) + 1).try_into().unwrap());
+        }
     }
 
     Ok(())

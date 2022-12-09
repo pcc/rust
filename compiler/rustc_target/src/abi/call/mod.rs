@@ -629,6 +629,8 @@ pub struct FnAbi<'a, Ty> {
     pub conv: Conv,
 
     pub can_unwind: bool,
+
+    pub pauth_signature: Option<u32>,
 }
 
 /// Error produced by attempting to adjust a `FnAbi`, for a "foreign" ABI.
@@ -772,6 +774,6 @@ mod size_asserts {
     use rustc_data_structures::static_assert_size;
     // tidy-alphabetical-start
     static_assert_size!(ArgAbi<'_, usize>, 56);
-    static_assert_size!(FnAbi<'_, usize>, 80);
+    static_assert_size!(FnAbi<'_, usize>, 88);
     // tidy-alphabetical-end
 }

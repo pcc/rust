@@ -969,6 +969,9 @@ fn default_configuration(sess: &Session) -> CrateConfig {
     if sess.opts.crate_types.contains(&CrateType::ProcMacro) {
         ret.insert((sym::proc_macro, None));
     }
+    if sess.opts.cg.ptrauth_calls {
+        ret.insert((sym::ptrauth_calls, None));
+    }
     ret
 }
 
@@ -1056,6 +1059,7 @@ impl CrateCheckConfig {
             sym::doctest,
             // miri
             sym::miri,
+            sym::ptrauth_calls,
         ];
 
         // We only insert well-known names if `names()` was activated
@@ -1103,6 +1107,7 @@ impl CrateCheckConfig {
             sym::proc_macro,
             sym::debug_assertions,
             sym::target_thread_local,
+            sym::ptrauth_calls,
         ] {
             self.values_valid.entry(name).or_default();
         }

@@ -55,6 +55,17 @@ pub fn log2f64(f: f64) -> f64 {
     f.ln() * crate::f64::consts::LOG2_E
 }
 
+#[cfg(ptrauth_calls)]
+extern "C" {
+    #[link_name = "llvm.ptrauth.sign"]
+    fn ptrauth_sign(pointer: i64, key: i32, discriminator: i64) -> i64;
+}
+
+#[cfg(not(ptrauth_calls))]
+fn ptrauth_sign(pointer: i64, _key: i32, _discriminator: i64) -> i64 {
+    pointer
+}
+
 // Back in the day [1] the `signal` function was just an inline wrapper
 // around `bsd_signal`, but starting in API level android-20 the `signal`
 // symbols was introduced [2]. Finally, in android-21 the API `bsd_signal` was
@@ -71,10 +82,14 @@ pub fn log2f64(f: f64) -> f64 {
 //                                       /usr/include/signal.h
 // [3]: https://chromium.googlesource.com/android_tools/+/20ee6d/ndk/platforms
 //                                       /android-21/arch-arm/usr/include/signal.h
-pub unsafe fn signal(signum: c_int, handler: sighandler_t) -> sighandler_t {
+pub unsafe fn signal(signum: c_int, mut handler: sighandler_t) -> sighandler_t {
     weak!(fn signal(c_int, sighandler_t) -> sighandler_t);
     weak!(fn bsd_signal(c_int, sighandler_t) -> sighandler_t);
 
+    #[cfg(target_arch = "aarch64")]
+    if handler != 0 {
+        handler = ptrauth_sign(handler.try_into().unwrap(), 0, 42525).try_into().unwrap();
+    }
     let f = signal.get().or_else(|| bsd_signal.get());
     let f = f.expect("neither `signal` nor `bsd_signal` symbols found");
     f(signum, handler)

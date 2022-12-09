@@ -1112,6 +1112,7 @@ symbols! {
         ptr_null_mut,
         ptr_offset_from,
         ptr_offset_from_unsigned,
+        ptrauth_calls,
         pub_macro_rules,
         pub_restricted,
         public,

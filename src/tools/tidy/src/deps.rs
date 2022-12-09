@@ -215,6 +215,7 @@ const PERMITTED_RUSTC_DEPENDENCIES: &[&str] = &[
     "sha-1",
     "sha2",
     "sharded-slab",
+    "siphasher",
     "smallvec",
     "snap",
     "stable_deref_trait",

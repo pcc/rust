@@ -79,6 +79,7 @@ pub enum LLVMModFlagBehavior {
     Append = 5,
     AppendUnique = 6,
     Max = 7,
+    Min = 8,
 }
 
 // Consts for the LLVM CallConv type, pre-cast to usize.
@@ -1180,6 +1181,7 @@ extern "C" {
     pub fn LLVMRustCreateAllocKindAttr(C: &Context, size_arg: u64) -> &Attribute;
 
     // Operations on functions
+    pub fn LLVMIsAFunction(Function: &Value) -> Option<&Value>;
     pub fn LLVMRustGetOrInsertFunction<'a>(
         M: &'a Module,
         Name: *const c_char,

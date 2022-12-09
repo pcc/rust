@@ -4,7 +4,7 @@
 //! and methods are represented as just a fn ptr and not a full
 //! closure.
 
-use crate::abi::FnAbiLlvmExt;
+use crate::abi::{FnAbi, FnAbiLlvmExt};
 use crate::attributes;
 use crate::common;
 use crate::context::CodegenCx;
@@ -13,7 +13,43 @@ use crate::value::Value;
 use rustc_codegen_ssa::traits::*;
 
 use rustc_middle::ty::layout::{FnAbiOf, HasTyCtxt};
-use rustc_middle::ty::{self, Instance, TypeVisitable};
+use rustc_middle::ty::{self, Instance, Ty, TypeVisitable};
+
+pub fn get_ptrauth_const<'ll, 'tcx>(
+    cx: &CodegenCx<'ll, 'tcx>,
+    llfn: &'ll Value,
+    key: i32,
+    disc: i64,
+) -> &'ll Value {
+    let init = cx.const_struct(
+        &[
+            llfn,
+            cx.const_int(cx.type_i32(), key as i64),
+            cx.const_int(cx.type_i64(), 0),
+            cx.const_int(cx.type_i64(), disc as i64),
+        ],
+        false,
+    );
+    let llglobal = llvm::add_global(cx.llmod, cx.val_ty(init), "");
+    llvm::set_initializer(llglobal, init);
+    llvm::set_global_constant(llglobal, true);
+    llvm::set_linkage(llglobal, llvm::Linkage::PrivateLinkage);
+    llvm::set_section(llglobal, "llvm.ptrauth");
+    llglobal
+}
+
+pub(crate) fn maybe_sign_fn_ptr<'ll, 'tcx>(
+    cx: &CodegenCx<'ll, 'tcx>,
+    llfn: &'ll Value,
+    sym: &str,
+    fn_abi: &FnAbi<'tcx, Ty<'tcx>>,
+) -> &'ll Value {
+    if let Some(sig) = fn_abi.pauth_signature && !sym.starts_with("llvm.") {
+        get_ptrauth_const(cx, llfn, /*IA*/0, sig.into())
+    } else {
+        llfn
+    }
+}
 
 /// Codegens a reference to a fn/method item, monomorphizing and
 /// inlining as it goes.

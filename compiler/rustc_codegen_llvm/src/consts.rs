@@ -1,4 +1,5 @@
 use crate::base;
+use crate::callee::maybe_sign_fn_ptr;
 use crate::common::{self, CodegenCx};
 use crate::debuginfo;
 use crate::errors::{InvalidMinimumAlignment, SymbolAlreadyDefined};
@@ -17,7 +18,7 @@ use rustc_middle::mir::interpret::{
     Scalar as InterpScalar,
 };
 use rustc_middle::mir::mono::MonoItem;
-use rustc_middle::ty::layout::LayoutOf;
+use rustc_middle::ty::layout::{FnAbiOf, LayoutOf};
 use rustc_middle::ty::{self, Instance, Ty};
 use rustc_middle::{bug, span_bug};
 use rustc_session::config::Lto;
@@ -185,7 +186,14 @@ fn check_and_apply_linkage<'ll, 'tcx>(
                 })
             });
             llvm::LLVMRustSetLinkage(g2, llvm::Linkage::InternalLinkage);
-            llvm::LLVMSetInitializer(g2, cx.const_ptrcast(g1, llty));
+            let signed_g1 = if let ty::Adt(def, substs) = ty.kind() &&
+                let Some(field) = def.all_fields().next() &&
+                let ty::FnPtr(sig) = field.ty(cx.tcx, substs).kind() {
+                    maybe_sign_fn_ptr(cx, g1, sym, cx.fn_abi_of_fn_ptr(*sig, ty::List::empty()))
+                } else {
+                    g1
+                };
+            llvm::LLVMSetInitializer(g2, cx.const_ptrcast(signed_g1, llty));
             g2
         }
     } else if cx.tcx.sess.target.arch == "x86" &&

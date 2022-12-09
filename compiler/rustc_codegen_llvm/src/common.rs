@@ -64,20 +64,19 @@ use std::fmt::Write;
 /// the `OperandBundleDef` value created for MSVC landing pads.
 pub struct Funclet<'ll> {
     cleanuppad: &'ll Value,
-    operand: OperandBundleDef<'ll>,
 }
 
 impl<'ll> Funclet<'ll> {
     pub fn new(cleanuppad: &'ll Value) -> Self {
-        Funclet { cleanuppad, operand: OperandBundleDef::new("funclet", &[cleanuppad]) }
+        Funclet { cleanuppad }
     }
 
     pub fn cleanuppad(&self) -> &'ll Value {
         self.cleanuppad
     }
 
-    pub fn bundle(&self) -> &OperandBundleDef<'ll> {
-        &self.operand
+    pub fn bundle(&self) -> OperandBundleDef<'ll> {
+        OperandBundleDef::new("funclet", &[self.cleanuppad])
     }
 }
 

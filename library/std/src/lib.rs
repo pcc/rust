@@ -259,6 +259,7 @@
 #![feature(let_chains)]
 #![feature(linkage)]
 #![feature(link_cfg)]
+#![feature(link_llvm_intrinsics)]
 #![feature(min_specialization)]
 #![feature(must_not_suspend)]
 #![feature(needs_panic_runtime)]

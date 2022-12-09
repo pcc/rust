@@ -39,6 +39,7 @@
     -C           prefer-dynamic=val -- prefer dynamic linking to static linking (default: no)
     -C         profile-generate=val -- compile the program with profiling instrumentation
     -C              profile-use=val -- use the given `.profdata` file for profile-guided optimization
+    -C            ptrauth-calls=val -- enable PAuth ABI for calls (default: no)
     -C         relocation-model=val -- control generation of position-independent code (PIC) (`rustc --print relocation-models` for details)
     -C                   remark=val -- print remarks for these optimization passes (space separated, or "all")
     -C                    rpath=val -- set rpath values in libs/exes (default: no)

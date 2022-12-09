@@ -2,7 +2,7 @@ use crate::abi::FnAbiLlvmExt;
 use crate::attributes;
 use crate::common::Funclet;
 use crate::context::CodegenCx;
-use crate::llvm::{self, AtomicOrdering, AtomicRmwBinOp, BasicBlock};
+use crate::llvm::{self, AtomicOrdering, AtomicRmwBinOp, BasicBlock, OperandBundleDef};
 use crate::type_::Type;
 use crate::type_of::LayoutLlvmExt;
 use crate::value::Value;
@@ -225,7 +225,7 @@ impl<'a, 'll, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'll, 'tcx> {
         debug!("invoke {:?} with args ({:?})", llfn, args);
 
         let args = self.check_call("invoke", llty, llfn, args);
-        let bundle = funclet.map(|funclet| funclet.bundle());
+        let bundle = self.operand_bundle(fn_abi, llfn, funclet);
         let bundle = bundle.as_ref().map(|b| &*b.raw);
 
         let invoke = unsafe {
@@ -1159,7 +1159,7 @@ impl<'a, 'll, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'll, 'tcx> {
         debug!("call {:?} with args ({:?})", llfn, args);
 
         let args = self.check_call("call", llty, llfn, args);
-        let bundle = funclet.map(|funclet| funclet.bundle());
+        let bundle = self.operand_bundle(fn_abi, llfn, funclet);
         let bundle = bundle.as_ref().map(|b| &*b.raw);
 
         let call = unsafe {
@@ -1400,6 +1400,30 @@ impl<'a, 'll, 'tcx> Builder<'a, 'll, 'tcx> {
             .collect();
 
         Cow::Owned(casted_args)
+    }
+
+    fn ptrauth_bundle(&mut self, disc: u32) -> OperandBundleDef<'ll> {
+        OperandBundleDef::new(
+            "ptrauth",
+            &[
+                self.cx.const_int(self.cx.type_i32(), 0),
+                self.cx.const_int(self.cx.type_i64(), disc as i64),
+            ],
+        )
+    }
+
+    fn operand_bundle(
+        &mut self,
+        fn_abi: Option<&FnAbi<'tcx, Ty<'tcx>>>,
+        llfn: &'ll Value,
+        funclet: Option<&Funclet<'ll>>,
+    ) -> Option<OperandBundleDef<'ll>> {
+        if let Some(fn_abi) = fn_abi && let Some(sig) = fn_abi.pauth_signature && unsafe { llvm::LLVMIsAFunction(llfn).is_none() } {
+            assert!(funclet.is_none());
+            Some(self.ptrauth_bundle(sig))
+        } else {
+            funclet.map(|funclet| funclet.bundle())
+        }
     }
 
     pub fn va_arg(&mut self, list: &'ll Value, ty: &'ll Type) -> &'ll Value {
